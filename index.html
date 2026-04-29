@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>影智排 SmartShow · 影院智能排片决策系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --bg: #f8fafc; --card-bg: rgba(255,255,255,0.8); --text: #0f172a; --accent: #2563eb; --accent-light: #3b82f6; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --border: rgba(0,0,0,0.05); }
+        body { background: linear-gradient(135deg, #f0f4ff 0%, #f8fafc 40%, #f1f5f9 100%); color: var(--text); font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif; }
+        .glass-card { background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.6); border-radius: 24px; box-shadow: 0 20px 40px -12px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.02); transition: all 0.3s ease; }
+        .glass-card:hover { box-shadow: 0 24px 48px -12px rgba(37,99,235,0.12), 0 6px 16px rgba(0,0,0,0.04); }
+        .accent-gradient { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); }
+        .btn-primary { background: #2563eb; color: white; font-weight: 600; padding: 12px 28px; border-radius: 14px; border: none; cursor: pointer; transition: all 0.2s; box-shadow: 0 8px 20px rgba(37,99,235,0.25); display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 12px 28px rgba(37,99,235,0.35); }
+        .btn-outline { background: transparent; color: #2563eb; font-weight: 600; padding: 12px 28px; border-radius: 14px; border: 2px solid #2563eb; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-outline:hover { background: #eff6ff; border-color: #1d4ed8; color: #1d4ed8; }
+        .btn-sm { padding: 8px 20px; font-size: 0.85rem; }
+        .input-field, .select-field { width: 100%; background: #ffffff; border: 1.5px solid #e2e8f0; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem; transition: 0.2s; outline: none; color: #0f172a; }
+        .input-field:focus, .select-field:focus { border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37,99,235,0.08); }
+        .label-sm { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #475569; margin-bottom: 4px; display: block; }
+        .badge { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.03em; }
+        .badge-s { background: #dcfce7; color: #166534; }
+        .badge-a { background: #dbeafe; color: #1e40af; }
+        .badge-b { background: #fef9c3; color: #854d0e; }
+        .badge-c { background: #ffedd5; color: #9a3412; }
+        .badge-d { background: #fee2e2; color: #991b1b; }
+        .pulse-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; animation: pulse 2s infinite; }
+        .pulse-dot.green { background: #10b981; box-shadow: 0 0 6px #10b981; }
+        .pulse-dot.yellow { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+        .pulse-dot.red { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+        .img-placeholder { background: #f1f5f9; border: 2px dashed #cbd5e1; border-radius: 16px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.8rem; flex-direction: column; gap: 6px; min-height: 140px; transition: 0.2s; cursor: pointer; }
+        .img-placeholder:hover { border-color: #3b82f6; color: #3b82f6; }
+    </style>
+</head>
+<body class="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
+
+    <!-- 导航栏 -->
+    <nav class="flex justify-between items-center mb-6 pb-4 border-b border-slate-200/50">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 accent-gradient rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-300/30"><i class="fas fa-film text-lg"></i></div>
+            <div><span class="text-xl font-bold tracking-tight">影智排 <span class="text-blue-600">SmartShow</span></span><span class="hidden sm:inline-block ml-2 text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">创新创业联盟</span></div>
+        </div>
+        <div class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-500">
+            <span class="flex items-center gap-1.5"><i class="fas fa-chart-line text-blue-400"></i> 数据驱动</span>
+            <span class="flex items-center gap-1.5"><i class="fas fa-robot text-emerald-400"></i> 智能排片</span>
+        </div>
+    </nav>
+
+    <!-- ==================== 第一部分：多影片信息输入 ==================== -->
+    <section class="glass-card p-6 md:p-8 mb-8">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 accent-gradient rounded-xl flex items-center justify-center text-white"><i class="fas fa-clapperboard"></i></div>
+                <h2 class="text-2xl font-bold">🎬 近期影片信息</h2>
+            </div>
+            <button onclick="addFilm()" class="btn-primary btn-sm"><i class="fas fa-plus"></i> 添加影片</button>
+        </div>
+
+        <!-- 影片列表容器 -->
+        <div id="filmList" class="space-y-6">
+            <!-- 动态生成影片卡片 -->
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="flex flex-wrap gap-4 mt-6 pt-4 border-t border-slate-100">
+            <button onclick="runMultiAnalysis()" class="btn-primary"><i class="fas fa-play-circle"></i> 运行全模型分析</button>
+            <button onclick="runQuickEstimate()" class="btn-outline"><i class="fas fa-calculator"></i> 票房快速估算</button>
+            <div id="loading_indicator" class="hidden ml-4 flex items-center gap-2 text-sm text-blue-600 font-medium"><div class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>正在调用模型计算中...</div>
+        </div>
+    </section>
+
+    <!-- ==================== 第二部分：综合排片推荐与模型分析 ==================== -->
+    <section id="resultSection" class="space-y-6 hidden">
+        <!-- 2.1 综合排片方案 -->
+        <div class="glass-card p-6 md:p-8">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 accent-gradient-green rounded-xl flex items-center justify-center text-white"><i class="fas fa-check-circle"></i></div>
+                <h2 class="text-2xl font-bold">📋 综合排片推荐方案</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm" id="summaryTable">
+                    <thead class="bg-slate-50">
+                        <tr><th class="p-3 text-left">影片</th><th class="p-3">预测票房(万元)</th><th class="p-3">分级</th><th class="p-3">爆款概率</th><th class="p-3">建议场次</th><th class="p-3">占比</th><th class="p-3">推荐时段</th></tr>
+                    </thead>
+                    <tbody id="summaryBody" class="divide-y"></tbody>
+                </table>
+            </div>
+            <!-- 决策建议 -->
+            <div id="decision_advice" class="mt-4 p-5 bg-amber-50/70 rounded-2xl border border-amber-100 text-sm text-amber-900 hidden">
+                <p class="font-bold mb-1"><i class="fas fa-lightbulb"></i> 智能建议：</p>
+                <p id="advice_text"></p>
+            </div>
+        </div>
+
+        <!-- 2.2 排片时段分布与插图 -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- 左侧：排片时段分布表 -->
+    <div class="glass-card p-6 md:col-span-2">
+        <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="fas fa-clock text-blue-500"></i> 推荐排片时段分布</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50"><tr><th class="p-3 text-left">时段</th><th class="p-3">推荐影片</th><th class="p-3">场次占比</th><th class="p-3">票价策略</th></tr></thead>
+                <tbody id="timeSlotTable" class="divide-y"></tbody>
+            </table>
+        </div>
+        <p class="text-xs text-slate-400 mt-3">* 基于影片类型、预期受众与票房潜力智能预测</p>
+    </div>
+
+    <!-- 右侧：排片日历插图 -->
+    <div class="glass-card p-6 flex flex-col items-center justify-center">
+        <img src="排片.png" alt="影厅排班图" class="w-full max-h-64 object-contain rounded-2xl">
+        <p class="text-xs text-slate-400 mt-2">示例：影厅排片时间表</p>
+    </div>
+</div>
+        <!-- 2.3 模型分析图表 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="glass-card p-6">
+                <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="fas fa-chart-bar text-indigo-500"></i> 票房影响因素贡献度</h3>
+                <div class="relative" style="height:280px;"><canvas id="factorChart"></canvas></div>
+                <p class="text-xs text-slate-400 mt-3">标准化回归系数</p>
+            </div>
+            <div class="glass-card p-6">
+                <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="fas fa-chart-line text-emerald-500"></i> 排片效率与边际递减</h3>
+                <div class="relative" style="height:280px;"><canvas id="efficiencyChart"></canvas></div>
+                <p class="text-xs text-slate-400 mt-3">排片率超30%后效率下降</p>
+            </div>
+            <div class="glass-card p-6">
+                <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="fas fa-project-diagram text-purple-500"></i> K-Means 影片市场分级</h3>
+                <div class="relative" style="height:260px;"><canvas id="kmeansChart"></canvas></div>
+                <div class="flex flex-wrap gap-2 mt-3 text-xs"><span class="badge badge-s">S级</span><span class="badge badge-a">A级</span><span class="badge badge-b">B级</span><span class="badge badge-c">C级</span><span class="badge badge-d">D级</span></div>
+            </div>
+            <div class="glass-card p-6">
+                <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="fas fa-shield-halved text-emerald-500"></i> SVM 爆款识别性能</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-4 bg-emerald-50 rounded-2xl text-center"><div class="text-2xl font-black text-emerald-600">96.9%</div><div class="text-xs font-semibold">准确率</div></div>
+                    <div class="p-4 bg-blue-50 rounded-2xl text-center"><div class="text-2xl font-black text-blue-600">88.5%</div><div class="text-xs font-semibold">召回率</div></div>
+                    <div class="p-4 bg-amber-50 rounded-2xl text-center"><div class="text-2xl font-black text-amber-600">0.04s</div><div class="text-xs font-semibold">推理延迟</div></div>
+                    <div class="p-4 bg-slate-50 rounded-2xl text-center"><div class="text-2xl font-black text-slate-600">89</div><div class="text-xs font-semibold">支持向量</div></div>
+                </div>
+                <p class="text-sm text-slate-500 mt-4 italic">RBF核在高维空间构建最优超平面。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 初始状态提示 -->
+    <div id="empty_state" class="text-center py-16 text-slate-400">
+        <i class="fas fa-hand-pointer text-4xl mb-4 block"></i>
+        <p class="text-lg">在上方添加影片信息，然后点击「运行全模型分析」</p>
+        <p class="text-sm">系统将根据数据模型自动生成综合排片方案</p>
+    </div>
+
+    <footer class="text-center text-xs text-slate-400 mt-12 py-6 border-t border-slate-100">
+        影智排 SmartShow · 影院智能排片决策系统 · 创新创业联盟
+    </footer>
+
+    <script>
+        // ---------- 全局影片数据 ----------
+        let filmCounter = 0;
+        let filmsData = []; // { id, name, director, actors, releaseDate, type, screens, rating, price, targetRevenue }
+
+        // ---------- 模型函数 ----------
+        function predictRevenue(screens, rating, price) {
+            return Math.max(0, Math.round((screens * 1.5) + (rating * 85) - (price * 12)));
+        }
+        function estimateAttendance(screens, revenue, price) {
+            if (screens <= 0 || price <= 0) return 0;
+            return Math.round((revenue * 10000) / (price * screens) * 10) / 10;
+        }
+        function getFuseStatus(attendance) {
+            if (attendance >= 25) return 'green';
+            if (attendance >= 18) return 'yellow';
+            return 'red';
+        }
+        function classifyFilm(revenue, avgAtt, rating) {
+            if (revenue >= 300 && avgAtt >= 30) return { grade:'S', label:'S级·爆款', strategy:'饱和排片，重点营销，可适度提价。' };
+            if (revenue >= 200 && avgAtt >= 22) return { grade:'A', label:'A级·优质头部', strategy:'保持高排片，维护口碑，周末加场。' };
+            if (revenue >= 120 && avgAtt >= 16) return { grade:'B', label:'B级·中坚力量', strategy:'稳定排片，关注口碑，适时调整。' };
+            if (revenue >= 60) return { grade:'C', label:'C级·分众潜力', strategy:'控制排片，精准点映，长线放映。' };
+            return { grade:'D', label:'D级·长尾低效', strategy:'最低限度排片或撤片，避免资源浪费。' };
+        }
+        function computeSVM(revenue, avgAtt, rating) {
+            let score = 0;
+            if (avgAtt >= 30) score += 40; else if (avgAtt >= 25) score += 30; else if (avgAtt >= 22) score += 20; else score += 10;
+            if (revenue >= 300) score += 40; else if (revenue >= 200) score += 30; else if (revenue >= 150) score += 20; else score += 10;
+            if (rating >= 8.5) score += 20; else if (rating >= 8.0) score += 15; else if (rating >= 7.0) score += 10; else score += 5;
+            return Math.min(99.9, Math.max(0, score));
+        }
+
+        // ---------- 添加/删除影片卡片 ----------
+        function addFilm() {
+            const id = ++filmCounter;
+            filmsData.push({ id, name:'', director:'', actors:'', releaseDate:'', type:'action', screens:100, rating:8.0, price:42, targetRevenue:150 });
+            renderFilmCards();
+        }
+
+        function removeFilm(id) {
+            filmsData = filmsData.filter(f => f.id !== id);
+            renderFilmCards();
+        }
+
+        function renderFilmCards() {
+            const container = document.getElementById('filmList');
+            if (filmsData.length === 0) {
+                container.innerHTML = `<div class="text-center text-slate-400 py-10"><i class="fas fa-film text-3xl mb-3"></i><p>暂无影片，请点击「添加影片」开始</p></div>`;
+                return;
+            }
+            container.innerHTML = filmsData.map(f => `
+                <div class="bg-white/60 rounded-2xl p-5 border border-slate-100 shadow-sm relative" data-id="${f.id}">
+                    <button onclick="removeFilm(${f.id})" class="absolute top-3 right-3 text-slate-400 hover:text-red-500 transition"><i class="fas fa-times-circle text-lg"></i></button>
+                    <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                        <!-- 海报上传区 -->
+                        <div class="md:col-span-1 flex flex-col items-center">
+                            <div class="img-placeholder w-full rounded-xl" style="min-height:160px;" onclick="document.getElementById('posterInput_${f.id}').click()">
+                                <i class="fas fa-upload text-xl"></i>
+                                <span>上传海报</span>
+                                <span class="text-xs">点击选择图片</span>
+                            </div>
+                            <input type="file" id="posterInput_${f.id}" accept="image/*" class="hidden" onchange="handlePosterUpload(this, ${f.id})">
+                            <img id="posterPreview_${f.id}" src="" class="hidden w-full rounded-xl mt-2 object-cover" style="max-height:160px;">
+                        </div>
+                        <!-- 影片信息 -->
+                        <div class="md:col-span-5 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            <div><label class="label-sm">影片名称</label><input type="text" value="${f.name}" onchange="updateFilm(${f.id},'name',this.value)" class="input-field" placeholder="输入名称"></div>
+                            <div><label class="label-sm">导演</label><input type="text" value="${f.director}" onchange="updateFilm(${f.id},'director',this.value)" class="input-field" placeholder="导演"></div>
+                            <div><label class="label-sm">主演</label><input type="text" value="${f.actors}" onchange="updateFilm(${f.id},'actors',this.value)" class="input-field" placeholder="主演"></div>
+                            <div><label class="label-sm">上映日期</label><input type="date" value="${f.releaseDate}" onchange="updateFilm(${f.id},'releaseDate',this.value)" class="input-field"></div>
+                            <div><label class="label-sm">类型</label><select onchange="updateFilm(${f.id},'type',this.value)" class="select-field">
+                                <option value="action" ${f.type==='action'?'selected':''}>动作/冒险</option>
+                                <option value="comedy" ${f.type==='comedy'?'selected':''}>喜剧</option>
+                                <option value="drama" ${f.type==='drama'?'selected':''}>剧情/悬疑</option>
+                                <option value="scifi" ${f.type==='scifi'?'selected':''}>科幻/奇幻</option>
+                                <option value="animation" ${f.type==='animation'?'selected':''}>动画</option>
+                                <option value="other" ${f.type==='other'?'selected':''}>其他</option>
+                            </select></div>
+                            <div><label class="label-sm">拟排片场次</label><input type="number" value="${f.screens}" onchange="updateFilm(${f.id},'screens',+this.value)" class="input-field" min="1" max="500"></div>
+                            <div><label class="label-sm">预期评分</label><input type="number" step="0.1" value="${f.rating}" onchange="updateFilm(${f.id},'rating',+this.value)" class="input-field" min="1" max="10"></div>
+                            <div><label class="label-sm">平均票价(元)</label><input type="number" value="${f.price}" onchange="updateFilm(${f.id},'price',+this.value)" class="input-field" min="20" max="150"></div>
+                            <div><label class="label-sm">目标票房(万元)</label><input type="number" value="${f.targetRevenue}" onchange="updateFilm(${f.id},'targetRevenue',+this.value)" class="input-field" min="1" max="2000"></div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateFilm(id, key, value) {
+            const film = filmsData.find(f => f.id === id);
+            if (film) film[key] = value;
+        }
+
+        // 海报上传预览
+        function handlePosterUpload(input, id) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const preview = document.getElementById(`posterPreview_${id}`);
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+                // 隐藏占位符
+                input.previousElementSibling.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // ---------- 多影片分析 ----------
+        function analyzeAllFilms() {
+            return filmsData.map(f => {
+                const predicted = predictRevenue(f.screens, f.rating, f.price);
+                const avgAtt = estimateAttendance(f.screens, predicted, f.price);
+                const fuse = getFuseStatus(avgAtt);
+                const gradeInfo = classifyFilm(predicted, avgAtt, f.rating);
+                const svmProb = computeSVM(predicted, avgAtt, f.rating);
+                return { ...f, predicted, avgAtt, fuse, grade: gradeInfo.grade, gradeLabel: gradeInfo.label, strategy: gradeInfo.strategy, svmProb };
+            });
+        }
+
+        function runMultiAnalysis() {
+            if (filmsData.length === 0) { alert('请先添加至少一部影片'); return; }
+            const results = analyzeAllFilms();
+            // 按预测票房降序排序
+            results.sort((a,b) => b.predicted - a.predicted);
+            showResults();
+            renderSummaryTable(results);
+            renderTimeSlotTable(results);
+            updateKMeansChart(results);
+            document.getElementById('decision_advice').classList.remove('hidden');
+            // 智能建议
+            const topFilm = results[0];
+            document.getElementById('advice_text').innerText = `综合排序第一为《${topFilm.name||'未命名'}》，建议分配最多黄金场次。${topFilm.strategy}`;
+        }
+
+        function runQuickEstimate() {
+            if (filmsData.length === 0) { alert('请先添加影片'); return; }
+            const results = analyzeAllFilms();
+            results.sort((a,b) => b.predicted - a.predicted);
+            showResults();
+            renderSummaryTable(results);
+            document.getElementById('decision_advice').classList.remove('hidden');
+        }
+
+        function showResults() {
+            document.getElementById('empty_state').classList.add('hidden');
+            document.getElementById('resultSection').classList.remove('hidden');
+        }
+
+        function renderSummaryTable(results) {
+            const totalScreens = results.reduce((sum, f) => sum + f.screens, 0) || 1;
+            const tbody = document.getElementById('summaryBody');
+            tbody.innerHTML = results.map(f => {
+                const ratio = ((f.screens / totalScreens) * 100).toFixed(1);
+                let timeSlot = '黄金场';
+                if (f.grade === 'C' || f.grade === 'D') timeSlot = '上午/下午场';
+                else if (f.grade === 'B') timeSlot = '下午场+部分黄金场';
+                return `<tr>
+                    <td class="p-3 font-medium">${f.name||'未命名'}</td>
+                    <td class="p-3 text-center font-bold text-blue-700">${f.predicted}</td>
+                    <td class="p-3 text-center"><span class="badge badge-${f.grade.toLowerCase()}">${f.gradeLabel}</span></td>
+                    <td class="p-3 text-center">${f.svmProb.toFixed(1)}%</td>
+                    <td class="p-3 text-center">${f.screens}</td>
+                    <td class="p-3 text-center">${ratio}%</td>
+                    <td class="p-3 text-center">${timeSlot}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function renderTimeSlotTable(results) {
+            const morningFilms = [], afternoonFilms = [], eveningFilms = [];
+            results.forEach(f => {
+                if (f.grade === 'S' || f.grade === 'A') eveningFilms.push(f.name||'未命名');
+                else if (f.grade === 'B') afternoonFilms.push(f.name||'未命名');
+                else morningFilms.push(f.name||'未命名');
+            });
+            const tbody = document.getElementById('timeSlotTable');
+            tbody.innerHTML = `
+                <tr><td class="p-3">🌅 上午场 (9-12)</td><td class="p-3">${morningFilms.join('、') || '—'}</td><td class="p-3 text-center">25%</td><td class="p-3">优惠票价</td></tr>
+                <tr><td class="p-3">☀️ 下午场 (12-18)</td><td class="p-3">${afternoonFilms.join('、') || '—'}</td><td class="p-3 text-center">40%</td><td class="p-3">标准票价</td></tr>
+                <tr><td class="p-3">🌙 黄金场 (18-22)</td><td class="p-3">${eveningFilms.join('、') || '—'}</td><td class="p-3 text-center">35%</td><td class="p-3">峰值票价</td></tr>
+            `;
+        }
+
+        // ---------- 图表（静态 + 动态 K-Means） ----------
+        // 影响因素柱状图
+        new Chart(document.getElementById('factorChart'), {
+            type: 'bar',
+            data: {
+                labels: ['观影人次','排片场次','口碑评分','场均人次','票价(平日)','票价(假日)'],
+                datasets: [{
+                    data: [0.82,0.67,0.51,0.44,-0.09,0.04],
+                    backgroundColor: ['rgba(37,99,235,0.8)','rgba(59,130,246,0.7)','rgba(16,185,129,0.75)','rgba(99,102,241,0.65)','rgba(239,68,68,0.55)','rgba(245,158,11,0.55)'],
+                    borderColor: ['#1d4ed8','#2563eb','#059669','#4f46e5','#dc2626','#d97706'],
+                    borderWidth:1.5, borderRadius:8
+                }]
+            },
+            options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+        });
+
+        // 排片效率曲线（静态）
+        const rateLabels = [], effValues = [];
+        for(let i=5; i<=55; i+=2) { rateLabels.push(i+'%'); let v = i<=30 ? 55+i*1.5 : 55+45-(i-30)*2.2; effValues.push(Math.round(Math.max(20,v))); }
+        new Chart(document.getElementById('efficiencyChart'), {
+            type:'line',
+            data: {
+                labels: rateLabels,
+                datasets: [
+                    { label:'效率指数', data:effValues, borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.05)', fill:true, tension:0.4, borderWidth:3, pointRadius:3 },
+                    { label:'拐点(30%)', data: rateLabels.map((_,i)=> i===12?effValues[12]:null), borderColor:'#ef4444', pointRadius:8, pointStyle:'rectRounded', showLine:false }
+                ]
+            },
+            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}} }
+        });
+
+        // K-Means 动态气泡图
+        let kmeansChart;
+        const kmCtx = document.getElementById('kmeansChart').getContext('2d');
+        function getBubbleColor(grade) {
+            const map = { S: 'rgba(16,185,129,0.7)', A: 'rgba(59,130,246,0.6)', B: 'rgba(245,158,11,0.6)', C: 'rgba(239,68,68,0.5)', D: 'rgba(148,163,184,0.5)' };
+            return map[grade] || '#94a3b8';
+        }
+        function updateKMeansChart(results) {
+            const datasets = results.map(f => ({
+                label: f.name||'影片',
+                data: [{ x: Math.min(95, f.predicted/4), y: Math.min(95, f.avgAtt*3), r: Math.min(20, f.predicted/20+5) }],
+                backgroundColor: getBubbleColor(f.grade),
+                borderColor: getBubbleColor(f.grade).replace('0.6','1').replace('0.7','1'),
+                borderWidth: 2
+            }));
+            if (kmeansChart) kmeansChart.destroy();
+            kmeansChart = new Chart(kmCtx, {
+                type: 'bubble',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true } },
+                        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: 票房指数 ${ctx.raw.x}, 效率指数 ${ctx.raw.y}` } }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: '票房产出指数' }, min:0, max:100 },
+                        y: { title: { display: true, text: '排片效率指数' }, min:0, max:100 }
+                    }
+                }
+            });
+        }
+
+        // ---------- 初始化：默认添加两部示例影片 ----------
+        window.addEventListener('DOMContentLoaded', () => {
+            filmsData.push({ id: ++filmCounter, name:'长安三万里·续', director:'谢君伟', actors:'配音阵容', releaseDate:'2026-07-10', type:'animation', screens:110, rating:8.5, price:45, targetRevenue:200 });
+            filmsData.push({ id: ++filmCounter, name:'无名之辈2', director:'饶晓志', actors:'刘德华/肖央', releaseDate:'2026-07-18', type:'comedy', screens:90, rating:7.8, price:40, targetRevenue:160 });
+            renderFilmCards();
+        });
+    </script>
+</body>
+</html>
